@@ -16,10 +16,132 @@ from subprocess import call
 #then use G2 giving the final coordinates of the arc, say X0 Y3.2 and the center of the arc as an offset to the starting point.
 #G2 X0 Y3.2 3.2 0 will draw such a cut.
 
-class coil(object):
-    """A base class to represent a saddle coil, as machined from a 2D sheet.
+class Coordinate(object):
+    """A Coordinate is just a set of values, x and y."""
+    def __init__(self, x, y):
+        """x: x value of coordinate
+        y: y value of coordinate"""
+        
+        self.x = x
+        self.y = y
 
-        Its main purpose is to generate G-Code to cut a saddle coil using a CNC mill.
+    def __add__(self, other):
+        return Coordinate(self.x + other.x, self.y + other.y)
+
+    def shiftX(self, x):
+        return Coordinate(self.x + x, self.y)
+
+    def shiftY(self, y):
+        return Coordinate(self.x, self.y + y)
+
+class Straight(object):
+    """A class representing a straight cut."""
+
+    def __init__(self, x, y, p0 = Coordinate(0, 0)):
+        """Specify a straight line"""
+        self.destination = Coordinate(x, y) + p0
+
+    def gCode(self):
+        return "G1 X{0:.3f} Y{1:.3f}".format(destination.x, destination.y)
+
+class ClockwiseArc(object):
+    """A class representing a clockwise arc."""
+    def __init__(self, x, y, xC, yC, p0 = Coordinate(0, 0)):
+        """Specify a Clockwise Arc
+        x: x component of destination
+        y: y component of destination
+        xC: x offset of arc center
+        yC: y offset of arc center"""
+        self.destination = Coordinate(x, y) + p0
+        self.arcCenter = Coordinate(xC, yC)
+
+    def gCode(self):
+        return "G2 X{0:.3f} Y{1:.3f} I{2:.3f} {J:.3f}".format(self.destination.x, self.destination.y, self.arcCenter.x, self.arcCenter.y)
+
+class CounterClockwiseArc(ClockwiseArc):
+    """Inherits from clockwise arc. Overwrites gCode generation and TikZ Code generation."""
+    def gCode(self):
+        return "G3 X{0:.3f} Y{1:.3f} I{2:.3f} {J:.3f}".format(self.destination.x, self.destination.y, self.arcCenter.x, self.arcCenter.y)
+
+    
+class Path(object):
+    """A base class to represent a path. For our purposes, a path is a list of either straight lines or clockwise or counterclockwise arcs. 
+    """
+
+    def __init__(self, x0, y0):
+        """Init Method of path. This will set the starting point for the path."""
+        p0 = Coordinate(x0, y0)
+        
+        self.points = [p0]
+        self.path = []
+
+    def gCode(self):
+        retVal = "G0 Z5\n"
+        retVal += "G0 X{0:.3f} Y{0:.3f}".format(self.p0.x, self.p0.y)
+        retVal += "G0 Z0.5\n"
+
+        for p in self.path:
+            retVal += p.gCode + "\n"
+
+class SaddleCoil(object):
+    """A class to represent a simple saddle coil, as machined from a 2D sheet.
+
+        Its purpose is to generate G-Code to cut a saddle coil using a CNC mill.
+        Optionally generate tikz code to visualize the result using LaTeX."""
+
+    def __init__(self, h, r, alpha, width, cutterDiameter, gap = 1, legLength = 10, cornerRadius = 0):
+        """This routine creates the coordinates for the cuts.
+        
+        - h: height of the saddle coil as distance between center of traces
+        - r: radius (!) of the coil, not diameter
+        - alpha: opening angle of the saddle coil
+        - width: width of the copper traces
+        - cutterDiameter: cutting diameter of the tool.
+        - gap: Additional gap to increase the minimal distance between different segments of the coil.
+        - legLength: Length of the coils legs.
+        - cornerRadius: A radius > 0 will introduce rounded corners.
+
+        All units are in mm."""
+
+        #Setup a few useful coordinates along the path:
+
+        self.circumference = 2*pi*r
+
+        self.cD = cutterDiameter
+        self.width = width
+
+        cD2 = self.cD/2.
+        w2 = self.width/2.
+
+        #todo: get rid of x and y, merge into Point objects!
+        yInnerBottom = w2 + cD2
+        yInnerTop = h - w2 - cD2
+
+        yOuterBottom = 0 - w2 - cD2
+        yOuterTop = h + w2 + cD2
+
+        #xInnerLeft: first or left loop of the coil, inside left cutter coordinates
+        xInnerLeft_Left = self.angleToX(0) + w2 + cD2 
+        xInnerLeft_Right = self.angleToX(alpha) - w2 - cD2
+
+        xOuterLeft_Right = self.angleToX(alpha) + w2 + cD2
+        xOuterLeft_Left = self.angleToX(0) - w2 - cD2
+
+        #xInnerRight: second or right loop of the coil
+        xInnerRight_Left = self.angleToX(180) + w2 + cD2 
+        xInnerRight_Right = self.angleToX(180 + alpha) - w2 - cD2
+
+        xOuterRight_Left = self.angleToX(180) - w2 - cD2 
+        xOuterRight_Right = self.angleToX(180 + alpha) + w2 + cD2
+
+    
+
+
+   
+class SimpleSaddleCoil(object):
+    """A base class to represent a simple saddle coil, as machined from a 2D sheet.
+
+        Its purpose is to generate G-Code to cut a saddle coil using a CNC mill.
         Optionally generate tikz code to visualize the result using LaTeX.
 
     """
@@ -205,7 +327,7 @@ G00 Z5.00\n""".format(self.maxX, self.maxY)
 
     
 if __name__ == "__main__":
-    stAndrewsCoil = coil(8, 2.05, 120, 1, 1)
+    stAndrewsCoil = simpleSaddleCoil(8, 2.05, 120, 1, 1)
     #print stAndrewsCoil.lines
 
     #stAndrewsCoil.generateTikzCode(filename = "stAndrews1.tex", compileFile = True)
