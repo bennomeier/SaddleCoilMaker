@@ -1,0 +1,5 @@
+* SaddleCoilMaker
+
+Saddle Coil Maker is a Python Software to generate G Code for machinig saddle coils out of 2D sheets. It can also generate TikZ Code to visualize the computed paths using LaTeX.
+
+More details to follow.

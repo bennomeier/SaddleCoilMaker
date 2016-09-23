@@ -1,4 +1,5 @@
 *.py~
+*.org~
 *.pyc
 *.aux
 *.log
