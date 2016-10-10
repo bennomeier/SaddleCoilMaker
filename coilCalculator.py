@@ -398,3 +398,6 @@ if __name__ == "__main__":
     compactCoil.generateTikzCode(filename = "compactCoil.tex", compileFile = True, includePoints = True)
     compactCoil.generateGCode(filename = "compactCoil.txt")
 
+    innerCoilDNP = SaddleCoil(11, 7.5, 120, 3, 1, cornerRadius = 1, legLength = 35, compact = False)
+    innerCoilDNP.generateGCode(filename = "innderCoilDNP.txt", feed = 3.5)
+
